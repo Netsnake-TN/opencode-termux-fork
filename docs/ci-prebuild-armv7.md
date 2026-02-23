@@ -23,3 +23,5 @@ So CI now prioritizes cross-toolchain setup and release asset evidence collectio
 ## Next step to make this a real compiler pipeline
 
 Add repository-specific source build scripts for OpenCode/Bun armv7 and run them in this cross-toolchain job.
+
+# armv7 actions trace ping
