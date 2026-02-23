@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       opencode_version:
-        description: OpenCode version tag (metadata only unless source build succeeds)
+        description: OpenCode version tag (metadata/source-attempt)
         required: true
         default: "1.2.10"
       bun_version:
-        description: Bun version tag (metadata only unless source build succeeds)
+        description: Bun version tag (metadata/source-attempt)
         required: true
         default: "1.2.20"
   push:
@@ -16,6 +16,8 @@ on:
     paths:
       - .github/workflows/prebuild-armv7.yml
       - docs/ci-prebuild-armv7.md
+      - scripts/ci/build-bun-armv7.sh
+      - scripts/ci/build-opencode-armv7.sh
 
 jobs:
   armv7-cross-prebuild:
@@ -26,7 +28,7 @@ jobs:
       - name: Prepare output directories
         run: |
           set -euo pipefail
-          mkdir -p out/assets out/logs out/pkgfile-template out/toolchain
+          mkdir -p out/assets out/logs out/pkgfile-template out/toolchain out/status
 
       - name: Install cross toolchain and emulation
         run: |
@@ -35,9 +37,12 @@ jobs:
           sudo apt-get install -y \
             gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
             binutils-arm-linux-gnueabihf libc6-dev-armhf-cross \
-            qemu-user-static file jq zip unzip curl ca-certificates
+            qemu-user-static file jq zip unzip curl ca-certificates \
+            nodejs npm python3
           arm-linux-gnueabihf-gcc --version | head -n1 | tee out/toolchain/gcc-version.txt
           qemu-arm-static --version | head -n1 | tee out/toolchain/qemu-version.txt
+          node --version | tee out/toolchain/node-version.txt
+          npm --version | tee out/toolchain/npm-version.txt
 
       - name: Probe upstream release assets (evidence only)
         env:
@@ -50,7 +55,6 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
-
           variants = ["armv7", "armhf", "arm32", "armv7l", "linux-arm"]
           for name in ["opencode-release.json", "bun-release.json"]:
               p = Path("out/logs") / name
@@ -66,18 +70,46 @@ jobs:
               Path(f"out/logs/{name}.arm-candidates.txt").write_text("\n".join(hits) + "\n")
           PY
 
-      - name: Cross-build platform scaffold (placeholder for source builds)
-        env:
-          OPENCODE_VERSION: ${{ github.event.inputs.opencode_version || '1.2.10' }}
-          BUN_VERSION: ${{ github.event.inputs.bun_version || '1.2.20' }}
+      - name: Install host bun for compile-target probing
         run: |
           set -euo pipefail
-          cat > out/logs/cross-build-platform.txt <<'TXT'
-          This workflow sets up the armv7 cross toolchain and collects release evidence.
-          Source build commands for OpenCode/Bun armv7 are intentionally not hard-coded yet,
-          because upstream build systems and dependencies must be validated first.
-          Next step: add repo-specific source build scripts and run them here.
-          TXT
+          curl -fsSL https://bun.sh/install | bash
+          "$HOME/.bun/bin/bun" --version | tee out/toolchain/bun-host-version.txt
+
+      - name: Attempt bun armv7 binary build (source/probe)
+        env:
+          BUN_VERSION: ${{ github.event.inputs.bun_version || '1.2.20' }}
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          chmod +x scripts/ci/build-bun-armv7.sh
+          scripts/ci/build-bun-armv7.sh "$BUN_VERSION" out > out/logs/build-bun-armv7.log 2>&1
+
+      - name: Attempt opencode armv7 binary build (compile/probe)
+        env:
+          OPENCODE_VERSION: ${{ github.event.inputs.opencode_version || '1.2.10' }}
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          chmod +x scripts/ci/build-opencode-armv7.sh
+          scripts/ci/build-opencode-armv7.sh "$OPENCODE_VERSION" out > out/logs/build-opencode-armv7.log 2>&1
+
+      - name: Summarize build attempt status
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          out = Path('out')
+          assets = sorted([str(p.relative_to(out)) for p in (out/'assets').rglob('*') if p.is_file()])
+          status = {
+            'bun_armv7_bin_present': any('bun' in p and 'armv7' in p for p in assets),
+            'opencode_armv7_bin_present': any('opencode' in p and 'armv7' in p for p in assets),
+            'assets': assets,
+          }
+          (out/'status'/'build-attempt-status.json').write_text(json.dumps(status, indent=2)+"\n")
+          print(json.dumps(status, indent=2))
+          PY
 
       - name: Write pkgfile templates (armv7 handoff)
         run: |
@@ -105,30 +137,21 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib
-          import json
-          import os
+          import hashlib, json, os
           from pathlib import Path
-
           items = []
           for p in sorted(Path('out').rglob('*')):
               if p.is_file():
-                  items.append(
-                      {
-                          'path': str(p.relative_to('out')),
-                          'size': p.stat().st_size,
-                          'sha256': hashlib.sha256(p.read_bytes()).hexdigest(),
-                      }
-                  )
+                  items.append({'path': str(p.relative_to('out')), 'size': p.stat().st_size, 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()})
           manifest = {
-              'kind': 'cross-prebuild-handoff',
-              'target': 'linux-armv7',
-              'opencode_version': os.environ.get('OPENCODE_VERSION'),
-              'bun_version': os.environ.get('BUN_VERSION'),
-              'git_sha': os.environ.get('GITHUB_SHA', ''),
-              'contains_final_termux_runtime': False,
-              'note': 'Cross toolchain scaffold plus evidence/templates only until source build scripts are integrated',
-              'items': items,
+            'kind': 'cross-prebuild-handoff',
+            'target': 'linux-armv7',
+            'opencode_version': os.environ.get('OPENCODE_VERSION'),
+            'bun_version': os.environ.get('BUN_VERSION'),
+            'git_sha': os.environ.get('GITHUB_SHA', ''),
+            'contains_final_termux_runtime': False,
+            'goal': 'produce bun and opencode armv7l-linux bins',
+            'items': items,
           }
           Path('out/manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
           PY

@@ -1,27 +1,31 @@
-# CI Prebuild (armv7, cross-toolchain scaffold)
+# CI Prebuild (armv7, cross-toolchain + binary attempts)
 
-Phase A uses GitHub Actions to prepare an armv7 cross-build platform and emit handoff artifacts.
+Phase A now does two things:
 
-## Why this replaces URL-only downloads
+1. Prepare a Linux armv7 cross-build platform in GitHub Actions
+2. Attempt to produce **two armv7l-linux bins** for handoff:
+   - `bun` armv7 probe binary (hello sample first)
+   - `opencode` armv7 binary (from npm package entry via Bun compile)
 
-Direct armv7 download URLs for OpenCode/Bun are not reliable and often return 404.
-So CI now prioritizes cross-toolchain setup and release asset evidence collection.
+## Why this approach
 
-## What CI produces
+Upstream armv7 release URLs are unreliable or unavailable. The workflow still records release asset evidence, but the main path is now **attempt-based source/compile execution** with preserved logs.
 
-- armv7 cross toolchain evidence (`gcc`/`qemu` versions)
-- release asset snapshots from GitHub API for OpenCode and Bun
-- armv7 candidate asset name lists (if any)
-- pkgfile templates for downstream packaging
-- manifest/checksums for handoff provenance
+## Success condition (Phase A target)
 
-## What CI does not claim
+Artifact contains both files (or their build logs explaining blockers):
 
-- CI output is not final Termux runtime/package
-- final wrapping, patching, package assembly, and runtime/plugin verification still happen on local Termux devices
+- `assets/bun-hello-linux-armv7` (or future `bun-linux-armv7`)
+- `assets/opencode-linux-armv7`
 
-## Next step to make this a real compiler pipeline
+## Debug loop
 
-Add repository-specific source build scripts for OpenCode/Bun armv7 and run them in this cross-toolchain job.
+- Trigger workflow by push/workflow_dispatch
+- Download artifact bundle
+- Inspect:
+  - `logs/build-bun-armv7.log`
+  - `logs/build-opencode-armv7.log`
+  - `status/*.json`
+  - `status/build-attempt-status.json`
 
-# armv7 actions trace ping
+This keeps CI iterations fast and makes failures actionable.
