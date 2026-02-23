@@ -1,0 +1,149 @@
+name: "Prebuild armv7 assets (handoff only)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      opencode_version:
+        description: "OpenCode version"
+        required: true
+        default: "1.2.10"
+      bun_version:
+        description: "Bun version"
+        required: true
+        default: "1.2.20"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - ".github/workflows/prebuild-armv7.yml"
+      - "docs/ci-prebuild-armv7.md"
+
+jobs:
+  prebuild-armv7:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare directories
+        run: |
+          set -euo pipefail
+          mkdir -p out/assets out/pkgfile-template
+
+      - name: Download opencode armv7 artifact if available
+        env:
+          OPENCODE_VERSION: ${{ github.event.inputs.opencode_version || '1.2.10' }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/opencode-linux-armv7.tar.gz"
+          if curl -fL "$url" -o "out/assets/opencode-linux-armv7-${OPENCODE_VERSION}.tar.gz"; then
+            echo "opencode armv7 fetched"
+          else
+            printf 'missing upstream artifact: %s\n' "$url" > out/assets/opencode-linux-armv7-MISSING.txt
+          fi
+
+      - name: Download bun armv7 artifact if available
+        env:
+          BUN_VERSION: ${{ github.event.inputs.bun_version || '1.2.20' }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-armv7.zip"
+          if curl -fL "$url" -o "out/assets/bun-linux-armv7-${BUN_VERSION}.zip"; then
+            echo "bun armv7 fetched"
+          else
+            printf 'missing upstream artifact: %s\n' "$url" > out/assets/bun-linux-armv7-MISSING.txt
+          fi
+
+      - name: Generate checksums and manifest
+        env:
+          OPENCODE_VERSION: ${{ github.event.inputs.opencode_version || '1.2.10' }}
+          BUN_VERSION: ${{ github.event.inputs.bun_version || '1.2.20' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$(ls -A out/assets 2>/dev/null)" ]; then
+            (cd out/assets && sha256sum * > ../checksums.txt)
+          else
+            : > out/checksums.txt
+          fi
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          assets = Path("out/assets")
+          items = []
+          for p in sorted(assets.glob("*")):
+              if p.is_file():
+                  items.append(
+                      {
+                          "name": p.name,
+                          "size": p.stat().st_size,
+                          "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+                      }
+                  )
+
+          manifest = {
+              "kind": "prebuild-handoff",
+              "target": "linux-armv7",
+              "opencode_version": os.environ.get("OPENCODE_VERSION"),
+              "bun_version": os.environ.get("BUN_VERSION"),
+              "git_sha": os.environ.get("GITHUB_SHA", ""),
+              "items": items,
+              "note": "handoff assets only; final Termux packages must be built and validated locally",
+          }
+          Path("out/manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PY
+
+      - name: Write pkgfile templates
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          Path("out/pkgfile-template/PKGBUILD.template").write_text(
+              "\n".join(
+                  [
+                      "pkgname=opencode",
+                      "pkgver=<opencode_version>",
+                      "pkgrel=1",
+                      "arch=('armv7l')",
+                      "source=('opencode-linux-armv7-<opencode_version>.tar.gz')",
+                      "sha256sums=('<sha256>')",
+                      "",
+                  ]
+              )
+          )
+          Path("out/pkgfile-template/debian-control.template").write_text(
+              "\n".join(
+                  [
+                      "Package: opencode",
+                      "Version: <opencode_version>",
+                      "Architecture: armhf",
+                      "Maintainer: Hope2333(幽零小喵) <u0catmiao@proton.me>",
+                      "Description: OpenCode prebuild handoff template for local Termux final packaging",
+                      "",
+                  ]
+              )
+          )
+          PY
+
+      - name: Write handoff note
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          Path("out/HANDOFF.md").write_text(
+              "This artifact bundle is for prebuild handoff only.\n"
+              "Do not treat as final Termux package output.\n"
+              "Final runtime wrapping, launcher bugfix integration, package build, and runtime/plugin verification must run locally on Termux.\n"
+          )
+          PY
+
+      - name: Upload prebuild bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuild-armv7-bundle
+          path: out/
+          retention-days: 30
