@@ -20,7 +20,7 @@ TS
 status="failed"
 reason="unknown"
 
-if "$HOST_BUN" build "$OUT_DIR/work/hello.ts" --compile --target=bun-linux-armv7 -o "$OUT_DIR/assets/bun-hello-linux-armv7"; then
+if "$HOST_BUN" build "$OUT_DIR/work/hello.ts" --compile --target=bun-linux-armv7 --outfile "$OUT_DIR/assets/bun-hello-linux-armv7"; then
 	file "$OUT_DIR/assets/bun-hello-linux-armv7" >"$OUT_DIR/logs/bun-hello-file.txt" || true
 	status="success"
 	reason="bun host supports bun-linux-armv7 compile target"
