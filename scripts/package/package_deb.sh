@@ -38,7 +38,7 @@ Maintainer: $MAINTAINER
 Section: utils
 Priority: optional
 Description: OpenCode CLI for Termux
-Depends: bash, ncurses
+Depends: glibc-runner, bash, ncurses
 EOF
 
 INSTALLED_SIZE=$(du -sk "$DEB_ROOT" | cut -f1)

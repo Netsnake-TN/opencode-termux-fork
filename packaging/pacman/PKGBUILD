@@ -7,7 +7,7 @@ url='https://github.com/anomalyco/opencode'
 license=('MIT')
 options=('!strip' '!debug')
 
-depends=('bash' 'ncurses')
+depends=('glibc-runner' 'bash' 'ncurses')
 makedepends=()
 source=()
 sha256sums=()
