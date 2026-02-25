@@ -87,3 +87,30 @@ Maintainer/packager identity defaults to:
 
 - Upstream OpenCode: <https://github.com/anomalyco/opencode>
 - This packaging workflow repository follows upstream license constraints for redistributed artifacts.
+
+## Build convenience and version resolution (latest update)
+
+You can orchestrate full local build/package flow with Make targets or wrapper flags.
+
+Examples:
+
+```bash
+make all VER=1.2.10 PKG=both
+make all VER=latest PKG=pacman
+./tools/make-opencode --all --ver 1.2.10 --pkg pacman
+```
+
+Rules:
+
+- `tools/produce-local.sh` version priority:
+  1) first positional argument (explicit version)
+  2) latest `opencode-linux-arm64` from npm (if no version passed)
+- Packaging targets auto-clean generated work dirs before running to reduce stale contamination.
+- Pacman package version is derived from staged runtime (`.../runtime/opencode --version`) instead of hardcoded `pkgver`.
+
+## TUI exit behavior (latest update)
+
+Launcher now preserves normal exit summaries better:
+
+- successful exits use soft tty cleanup (keeps session/restore output visible)
+- signal/error exits still use full tty cleanup for safety
