@@ -9,11 +9,18 @@
 ## Phase B (local Termux final package)
 
 1. Prepare runtime: `tools/produce-local.sh <version>`
+   - If npm has no requested version, script falls back to GitHub release binary download for that version.
 2. Build staged prefix: `scripts/build.sh`
 3. Verify staged runtime version
 4. Build DEB: `scripts/package/package_deb.sh`
 5. Build pacman package: `scripts/package/package_pacman.sh`
 6. Verify package runtime versions before install
+7. (Optional) Batch build multiple versions:
+   - `make batch VERS='1.2.10 1.2.11 1.2.12' PKG=both`
+   - supports bracket ranges like: `VERS='1.1.[1-20]'`
+8. (Optional) Send artifacts to custom output dir:
+   - `ODIR=~/oct-out make all VER=1.2.10 PKG=both`
+   - `ODIR=~/oct-out make batch VERS='1.1.[1-20]' PKG=deb`
 
 ## Phase C (plugin lifecycle)
 

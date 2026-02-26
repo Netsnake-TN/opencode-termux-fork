@@ -38,7 +38,7 @@ Maintainer: $MAINTAINER
 Section: utils
 Priority: optional
 Description: OpenCode CLI for Termux
-Depends: glibc, bash, ncurses
+Depends: glibc, openssl-glibc, bash, ncurses
 Recommends: glibc-runner
 EOF
 

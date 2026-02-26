@@ -7,7 +7,7 @@ url='https://github.com/anomalyco/opencode'
 license=('MIT')
 options=('!strip' '!debug')
 
-depends=('glibc' 'bash' 'ncurses')
+depends=('glibc' 'openssl-glibc' 'bash' 'ncurses')
 optdepends=('glibc-runner: compatibility helper shell/tools for troubleshooting glibc binaries')
 makedepends=()
 source=()

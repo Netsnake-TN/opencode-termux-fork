@@ -78,6 +78,7 @@ Maintainer/packager identity defaults to:
 
 ## Quick links
 
+- Glibc dependency reduction report: `docs/glibc-min-deps-test-report.md`
 - Runtime build details: `docs/13-opencode-runtime-build.md`
 - Package docs: `docs/20-packaging-deb.md`, `docs/21-packaging-pkg-tar-xz.md`
 - CI armv7 handoff: `docs/ci-prebuild-armv7.md`
@@ -98,7 +99,9 @@ Examples:
 ```bash
 make all VER=1.2.10 PKG=both
 make all VER=latest PKG=pacman
+make batch VERS='1.1.[1-20]' PKG=deb ODIR=~/oct-out
 ./tools/make-opencode --all --ver 1.2.10 --pkg pacman
+./tools/make-opencode --batch --vers '1.2.10 1.2.11' --pkg both --odir ~/oct-out
 ```
 
 Rules:
@@ -106,9 +109,12 @@ Rules:
 - `tools/produce-local.sh` version priority:
   1) first positional argument (explicit version)
   2) latest `opencode-linux-arm64` from npm (if no version passed)
+- if npm package for requested version is unavailable, fallback downloads GitHub release binary (`opencode-linux-arm64.tar.gz`) for that version.
 - Packaging targets auto-clean generated work dirs before running to reduce stale contamination.
 - Pacman package version is derived from staged runtime (`.../runtime/opencode --version`) instead of hardcoded `pkgver`.
 - Package metadata now uses `Depends: glibc` and recommends/optdepends `glibc-runner` as fallback helper tools.
+  Current validated network-minimal set (for `opencode run "hi"`): `glibc` + `openssl-glibc`.
+- `ODIR` (or wrapper flag `--odir`) can be used to place final packages in a custom output directory.
 
 ## TUI exit behavior (latest update)
 
