@@ -38,7 +38,8 @@ Maintainer: $MAINTAINER
 Section: utils
 Priority: optional
 Description: OpenCode CLI for Termux
-Depends: glibc-runner, bash, ncurses
+Depends: glibc, bash, ncurses
+Recommends: glibc-runner
 EOF
 
 INSTALLED_SIZE=$(du -sk "$DEB_ROOT" | cut -f1)
@@ -49,6 +50,7 @@ cat >"$DEB_ROOT/DEBIAN/postinst" <<'POSTINST'
 set -e
 echo "OpenCode for Termux installed"
 echo "Run: opencode --version"
+echo "Optional fallback compatibility tools: pkg install glibc-runner"
 exit 0
 POSTINST
 chmod 755 "$DEB_ROOT/DEBIAN/postinst"

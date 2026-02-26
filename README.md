@@ -74,6 +74,7 @@ Maintainer/packager identity defaults to:
 - Does not use musl as the final Termux runtime path
 - Does not use proot as official build path
 - Does not treat CI artifacts as final Termux release binaries
+- Default package hard dependency is `glibc`; `glibc-runner` is optional fallback tooling for compatibility/troubleshooting
 
 ## Quick links
 
@@ -107,6 +108,7 @@ Rules:
   2) latest `opencode-linux-arm64` from npm (if no version passed)
 - Packaging targets auto-clean generated work dirs before running to reduce stale contamination.
 - Pacman package version is derived from staged runtime (`.../runtime/opencode --version`) instead of hardcoded `pkgver`.
+- Package metadata now uses `Depends: glibc` and recommends/optdepends `glibc-runner` as fallback helper tools.
 
 ## TUI exit behavior (latest update)
 
