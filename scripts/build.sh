@@ -12,6 +12,8 @@ RUNTIME_FALLBACK_INPUT="${OPENCODE_RUNTIME_FALLBACK_INPUT:-$ROOT_DIR/artifacts/o
 
 ensure_dir "$PREFIX_DIR/lib/opencode/runtime"
 ensure_dir "$PREFIX_DIR/bin"
+ensure_dir "$PREFIX_DIR/lib/opencode/tools"
+ensure_dir "$PREFIX_DIR/lib/opencode/system-skills"
 
 if [[ -d "$OPENCODE_SRC_DIR" ]]; then
 	log "copying source from $OPENCODE_SRC_DIR"
@@ -38,6 +40,18 @@ else
 fi
 
 install -m 755 "$ROOT_DIR/scripts/launcher.sh" "$PREFIX_DIR/bin/opencode"
+if [[ -f "$ROOT_DIR/tools/plugin-manager.sh" ]]; then
+	install -m 755 "$ROOT_DIR/tools/plugin-manager.sh" "$PREFIX_DIR/lib/opencode/tools/plugin-manager.sh"
+fi
+if [[ -f "$ROOT_DIR/tools/plugin-selfcheck.sh" ]]; then
+	install -m 755 "$ROOT_DIR/tools/plugin-selfcheck.sh" "$PREFIX_DIR/lib/opencode/tools/plugin-selfcheck.sh"
+fi
+if [[ -f "$ROOT_DIR/scripts/hooks/run-system-skills.sh" ]]; then
+	install -m 755 "$ROOT_DIR/scripts/hooks/run-system-skills.sh" "$PREFIX_DIR/lib/opencode/tools/run-system-skills.sh"
+fi
+if [[ -d "$ROOT_DIR/packaging/manifests/system-skills" ]]; then
+	cp -a "$ROOT_DIR/packaging/manifests/system-skills/." "$PREFIX_DIR/lib/opencode/system-skills/"
+fi
 
 write_build_meta "$ROOT_DIR/artifacts/opencode/build.meta" \
 	"component=opencode" \

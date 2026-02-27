@@ -37,6 +37,9 @@
 
 11. Environment/plugin read-only self-check:
    - `make selfcheck`
+12. Hook/skill verification in matrix run:
+   - matrix run should emit hook log under `$PREFIX/var/log/opencode-hooks.log`
+   - verify system skill manifests are visible in selfcheck output
 
 ## Phase C (plugin lifecycle)
 
@@ -45,6 +48,7 @@
 3. Update plugin package
 4. Roll back snapshot if needed
 5. Export or apply local patches when upstream changes break runtime
+6. If package-mode system skills are used, verify hook runner log + manifest status after install/upgrade
 
 ## Machine2 first-time prep
 

@@ -138,6 +138,9 @@ Maintainer/packager identity defaults to:
 - Glibc dependency reduction report: `docs/glibc-min-deps-test-report.md`
 - Upgrade/downgrade simulation helper: `tools/upgrade-matrix.sh`
 - Read-only plugin/environment self-check: `tools/plugin-selfcheck.sh`
+- System skill manifests (package mode): `packaging/manifests/system-skills/`
+- Hook runner (package mode): `scripts/hooks/run-system-skills.sh`
+- System-skill architecture: `docs/system-skills-hook-architecture.md`
 - Runtime build details: `docs/13-opencode-runtime-build.md`
 - Package docs: `docs/20-packaging-deb.md`, `docs/21-packaging-pkg-tar-xz.md`
 - CI armv7 handoff: `docs/ci-prebuild-armv7.md`
@@ -175,6 +178,13 @@ Rules:
 - Pacman package version is derived from staged runtime (`.../runtime/opencode --version`) instead of hardcoded `pkgver`.
 - Package metadata now uses required `glibc` + `openssl-glibc`; `glibc-runner` is optional fallback tooling (`Suggests`/`optdepends`).
   Current validated network-minimal set (for `opencode run "hi"`): `glibc` + `openssl-glibc`.
+- Package-mode system skill hooks are non-interactive and fail-soft by default:
+  - `OPENCODE_HOOK_STRICT=0`
+  - `OPENCODE_HOOK_ENABLE_NETWORK=0`
+  - this avoids silent plugin auto-install/update during package install/upgrade.
+- Phase-2 gate/registry support:
+  - compatibility gates (`minimum_core_version` / `maximum_core_version` / blocklists)
+  - system registry at `$PREFIX/share/opencode/system-skills-registry.json`
 - output policy:
   - default output root is project `packing/`
   - if `ODIR` is set, outputs go to `ODIR` and do not use project `packing/`

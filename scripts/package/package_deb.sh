@@ -51,6 +51,10 @@ set -e
 echo "OpenCode for Termux installed"
 echo "Run: opencode --version"
 echo "Optional fallback compatibility tools: pkg install glibc-runner"
+HOOK_RUNNER="/data/data/com.termux/files/usr/lib/opencode/tools/run-system-skills.sh"
+if [[ -x "$HOOK_RUNNER" ]]; then
+  OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$HOOK_RUNNER" post_install || true
+fi
 exit 0
 POSTINST
 chmod 755 "$DEB_ROOT/DEBIAN/postinst"
