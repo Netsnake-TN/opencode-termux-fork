@@ -60,6 +60,21 @@ This repository is part of the OML/OCT track and focuses on:
 - Final packages are produced **locally on Termux**
 - GitHub Actions is used for **armv7 cross-prebuild handoff** only (non-mainline/deferred track)
 
+### Completion snapshot (current)
+
+- ✅ Mainline Termux packaging flow (deb + pacman) is operational
+- ✅ machine1(build) -> local relay -> machine2(test) lifecycle is validated
+- ✅ plugin/system-skill hook framework phase-2 is implemented and tested (registry + compatibility gates + blocklist)
+- ✅ read-only diagnostics and matrix simulation are available (`make selfcheck`, `make matrix`)
+- 🚧 Next: OML parent orchestration targets and richer plugin policy controls
+
+### What OCT can do next
+
+1. Expand matrix scenarios to cross-version ranges with archived logs per run.
+2. Add registry inspection/reporting commands for system skills and hook outcomes.
+3. Add policy presets for controlled networked plugin auto-update on machine1 only.
+4. Tighten GNU/Linux secondary build validation while preserving Termux-first guarantees.
+
 ## Scope and status classification
 
 - **Mainline (maintained in this repo)**
