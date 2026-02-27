@@ -67,13 +67,25 @@ download_upstream_binary() {
 	else
 		die "missing curl/wget for github fallback download"
 	fi
+
 	mkdir -p "$WORK_DIR/package/bin"
 	tar -xzf "$gh_tgz" -C "$WORK_DIR" || true
-	if [[ -x "$WORK_DIR/opencode-linux-arm64" ]]; then
-		cp "$WORK_DIR/opencode-linux-arm64" "$UPSTREAM_BIN"
+
+	local candidate=""
+	for c in "$WORK_DIR/opencode-linux-arm64" "$WORK_DIR/opencode"; do
+		if [[ -x "$c" ]]; then
+			candidate="$c"
+			break
+		fi
+	done
+
+	if [[ -z "$candidate" ]]; then
+		candidate="$(find "$WORK_DIR" -maxdepth 3 -type f \( -name 'opencode' -o -name 'opencode-*' \) -perm -u+x 2>/dev/null | head -n1 || true)"
 	fi
-	[[ -x "$UPSTREAM_BIN" ]] || die "github fallback unpacked but upstream binary not found"
-	log "using GitHub release source for version $VER"
+
+	[[ -n "$candidate" && -x "$candidate" ]] || die "github fallback unpacked but upstream binary not found"
+	cp "$candidate" "$UPSTREAM_BIN"
+	log "using GitHub release source for version $VER (candidate: $candidate)"
 }
 
 need npm

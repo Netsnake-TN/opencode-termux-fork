@@ -31,6 +31,13 @@
    - default classified layout: `deb/` and `pacman/`
    - flattened layout: use `MIX=1` or wrapper `--mix`
 
+10. Cross-machine lifecycle simulation (cached artifacts only):
+   - `TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 make matrix VERS='1.2.9 1.2.10' ODIR=~/oct-out`
+   - validates install/upgrade/downgrade/reinstall on machine2
+
+11. Environment/plugin read-only self-check:
+   - `make selfcheck`
+
 ## Phase C (plugin lifecycle)
 
 1. Install plugin package with apt or pacman

@@ -91,6 +91,8 @@ Maintainer/packager identity defaults to:
 ## Quick links
 
 - Glibc dependency reduction report: `docs/glibc-min-deps-test-report.md`
+- Upgrade/downgrade simulation helper: `tools/upgrade-matrix.sh`
+- Read-only plugin/environment self-check: `tools/plugin-selfcheck.sh`
 - Runtime build details: `docs/13-opencode-runtime-build.md`
 - Package docs: `docs/20-packaging-deb.md`, `docs/21-packaging-pkg-tar-xz.md`
 - CI armv7 handoff: `docs/ci-prebuild-armv7.md`
@@ -133,6 +135,29 @@ Rules:
   - if `ODIR` is set, outputs go to `ODIR` and do not use project `packing/`
   - default classified layout: `deb/` and `pacman/` subfolders
   - if `MIX=1` or `--mix`, artifacts are flattened into one directory
+
+## Lifecycle simulation and self-check (machine1 -> machine2)
+
+- Upgrade/downgrade simulation using cached deb artifacts only:
+
+```bash
+TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 \
+make matrix VERS='1.2.9 1.2.10' ODIR=~/oct-out
+```
+
+or direct script call:
+
+```bash
+VERS='1.2.9 1.2.10' ODIR=~/oct-out \
+TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 \
+./tools/upgrade-matrix.sh
+```
+
+- Read-only self-check (no mutation):
+
+```bash
+make selfcheck
+```
 
 ### Suggested production command patterns
 

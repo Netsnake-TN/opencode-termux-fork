@@ -13,7 +13,7 @@ MIX ?= 0
 
 OUTPUT_ROOT := $(if $(ODIR),$(ODIR),$(CURDIR)/packing)
 
-.PHONY: help all runtime stage deb pacman batch clean status steps
+.PHONY: help all runtime stage deb pacman batch clean status steps matrix selfcheck
 
 help:
 	@echo "OpenCode Termux build helper"
@@ -57,6 +57,8 @@ help:
 	@echo "Debug/introspection:"
 	@echo "  make steps"
 	@echo "  make status"
+	@echo "  make selfcheck"
+	@echo "  make matrix VERS='1.2.9 1.2.10' ODIR=~/oct-out"
 	@echo
 	@echo "Wrapper CLI (tools/make-opencode):"
 	@echo "  ./tools/make-opencode --all --ver 1.2.10 --pkg both"
@@ -64,6 +66,7 @@ help:
 	@echo "  ./tools/make-opencode --batch --vers '1.2.10 1.2.11' --pkg pacman"
 	@echo "  ./tools/make-opencode --batch --vers '1.1.[1-20]' --pkg both --odir ~/oct-out"
 	@echo "  ./tools/make-opencode --all --ver 1.2.10 --pkg both --odir ~/oct-out --mix"
+	@echo "  TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 ./tools/upgrade-matrix.sh"
 
 steps:
 	@echo "Build steps: clean -> runtime -> stage -> package"
@@ -134,6 +137,12 @@ status:
 	else \
 		echo "<missing>"; \
 	fi
+
+selfcheck:
+	./tools/plugin-selfcheck.sh
+
+matrix:
+	@VERS='$(VERS)' ODIR='$(ODIR)' TARGET_HOST='$(TARGET_HOST)' TARGET_PORT='$(TARGET_PORT)' TARGET_USER='$(TARGET_USER)' ./tools/upgrade-matrix.sh
 
 clean:
 	rm -rf artifacts/staged packaging/dpkg/work packaging/pacman/pkg packaging/pacman/src
