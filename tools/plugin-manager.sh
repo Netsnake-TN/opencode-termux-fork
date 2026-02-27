@@ -68,7 +68,11 @@ build_plugin() {
 		(cd "$pkg" && bun install && (bun run build || bun run compile || true))
 	else
 		need npm
-		(cd "$pkg" && npm install && (npm run build || npm run compile || true))
+		if ! (cd "$pkg" && npm install); then
+			log "npm install failed; retrying with linux platform compatibility flags"
+			(cd "$pkg" && npm_config_platform=linux npm install --force)
+		fi
+		(cd "$pkg" && (npm run build || npm run compile || true))
 	fi
 	[[ -f "$(entry_of "$name")" ]] || die "missing built plugin entry: $(entry_of "$name")"
 }
@@ -149,9 +153,9 @@ cmd_patch_apply() {
 cmd_verify() {
 	local port="${1:-7600}"
 	command -v curl >/dev/null 2>&1 || die "curl required for verify"
-	curl -fsS "http://127.0.0.1:${port}/config" | python3 - <<'PY'
+	python3 - "$(curl -fsS "http://127.0.0.1:${port}/config")" <<'PY'
 import sys,json
-d=json.load(sys.stdin)
+d=json.loads(sys.argv[1])
 m=d.get('mcp',{}) if isinstance(d.get('mcp',{}),dict) else {}
 a=d.get('agent',{}) if isinstance(d.get('agent',{}),dict) else {}
 print('mcp=', sorted(m.keys()))
