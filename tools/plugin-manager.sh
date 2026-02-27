@@ -70,7 +70,25 @@ build_plugin() {
 		need npm
 		if ! (cd "$pkg" && npm install); then
 			log "npm install failed; retrying with linux platform compatibility flags"
-			(cd "$pkg" && npm_config_platform=linux npm install --force)
+			(cd "$pkg" && npm_config_platform=linux npm_config_force=true npm install --force)
+			if [[ ! -f "$pkg/node_modules/@code-yeongyu/comment-checker/package.json" ]]; then
+				log "linux-platform retry still missing android-unsupported deps; pruning from package.json and retrying"
+				python3 - "$pkg/package.json" <<'PY'
+import json,sys
+from pathlib import Path
+p=Path(sys.argv[1])
+d=json.loads(p.read_text())
+changed=False
+for key in ("dependencies","devDependencies","optionalDependencies"):
+    obj=d.get(key)
+    if isinstance(obj,dict) and "@code-yeongyu/comment-checker" in obj:
+        del obj["@code-yeongyu/comment-checker"]
+        changed=True
+if changed:
+    p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n")
+PY
+				(cd "$pkg" && npm install --force)
+			fi
 		fi
 		(cd "$pkg" && (npm run build || npm run compile || true))
 	fi
