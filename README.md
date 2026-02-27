@@ -2,6 +2,51 @@
 
 Termux-focused packaging and runtime workflow for OpenCode.
 
+## Install first
+
+Use one package-manager path per machine.
+
+### Path A: default Termux (apt/pkg)
+
+Recommended for most clean Termux test machines.
+
+```bash
+apt install -y glibc-repo
+apt update
+apt install -y glibc openssl-glibc
+apt install -y /path/to/opencode_<version>_aarch64.deb
+```
+
+Optional fallback tooling:
+
+```bash
+apt install -y glibc-runner
+```
+
+### Path B: Termux with pacman as primary manager
+
+Use this only when your Termux environment is already pacman-based.
+
+```bash
+pacman -Syu
+pacman -S glibc openssl-glibc
+pacman -U /path/to/opencode-<version>-aarch64.pkg.tar.xz
+```
+
+Optional fallback tooling:
+
+```bash
+pacman -S glibc-runner
+```
+
+### Post-install quick checks
+
+```bash
+opencode --version
+opencode --help
+opencode web
+```
+
 This repository is part of the OML/OCT track and focuses on:
 
 - reproducible OpenCode runtime packaging on real Termux devices
@@ -11,7 +56,7 @@ This repository is part of the OML/OCT track and focuses on:
 
 ## Current status (important)
 
-- Verified runtime line: **OpenCode Runtime 1.2.10** (Android/Bionic wrapped)
+- Verified runtime line: OpenCode Runtime (Android/Bionic wrapped)
 - Final packages are produced **locally on Termux**
 - GitHub Actions is used for **armv7 cross-prebuild handoff** only (non-mainline/deferred track)
 
@@ -52,7 +97,7 @@ Use real Termux environment for final runtime wrapping and package generation.
 Typical flow:
 
 ```bash
-./tools/produce-local.sh 1.2.10
+./tools/produce-local.sh <version>
 ./scripts/build.sh
 ./scripts/package/package_deb.sh
 ./scripts/package/package_pacman.sh
@@ -104,19 +149,19 @@ Maintainer/packager identity defaults to:
 - Upstream OpenCode: <https://github.com/anomalyco/opencode>
 - This packaging workflow repository follows upstream license constraints for redistributed artifacts.
 
-## Build convenience and version resolution (latest update)
+## Build convenience and version resolution
 
 You can orchestrate full local build/package flow with Make targets or wrapper flags.
 
 Examples:
 
 ```bash
-make all VER=1.2.10 PKG=both
+make all VER=<version> PKG=both
 make all VER=latest PKG=pacman
-make batch VERS='1.1.[1-20]' PKG=deb ODIR=~/oct-out
-./tools/make-opencode --all --ver 1.2.10 --pkg pacman
-./tools/make-opencode --batch --vers '1.2.10 1.2.11' --pkg both --odir ~/oct-out
-./tools/make-opencode --all --ver 1.2.10 --pkg both --odir ~/oct-out --mix
+make batch VERS='<major.minor.[start-end]>' PKG=deb ODIR=~/oct-out
+./tools/make-opencode --all --ver <version> --pkg pacman
+./tools/make-opencode --batch --vers '<version1> <version2>' --pkg both --odir ~/oct-out
+./tools/make-opencode --all --ver <version> --pkg both --odir ~/oct-out --mix
 ```
 
 Rules:
@@ -128,7 +173,7 @@ Rules:
 - work directory defaults to project-local `.work/` (instead of `$HOME/work-*`), and is auto-cleaned unless `KEEP_WORK=1`.
 - Packaging targets auto-clean generated work dirs before running to reduce stale contamination.
 - Pacman package version is derived from staged runtime (`.../runtime/opencode --version`) instead of hardcoded `pkgver`.
-- Package metadata now uses `Depends: glibc` and recommends/optdepends `glibc-runner` as fallback helper tools.
+- Package metadata now uses required `glibc` + `openssl-glibc`; `glibc-runner` is optional fallback tooling (`Suggests`/`optdepends`).
   Current validated network-minimal set (for `opencode run "hi"`): `glibc` + `openssl-glibc`.
 - output policy:
   - default output root is project `packing/`
@@ -142,13 +187,13 @@ Rules:
 
 ```bash
 TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 \
-make matrix VERS='1.2.9 1.2.10' ODIR=~/oct-out
+make matrix VERS='<old_version> <new_version>' ODIR=~/oct-out
 ```
 
 or direct script call:
 
 ```bash
-VERS='1.2.9 1.2.10' ODIR=~/oct-out \
+VERS='<old_version> <new_version>' ODIR=~/oct-out \
 TARGET_HOST=192.168.1.22 TARGET_USER=u0_a258 \
 ./tools/upgrade-matrix.sh
 ```
@@ -162,13 +207,13 @@ make selfcheck
 ### Suggested production command patterns
 
 - single version, classified output in project:
-  - `make all VER=1.2.10 PKG=both`
+- `make all VER=<version> PKG=both`
 - single version, custom output root:
-  - `make all VER=1.2.10 PKG=both ODIR=~/oct-out`
+- `make all VER=<version> PKG=both ODIR=~/oct-out`
 - batch versions with range and flat output:
   - `make batch VERS='1.1.[1-20]' PKG=deb ODIR=~/oct-out MIX=1`
 
-## TUI exit behavior (latest update)
+## TUI exit behavior
 
 Launcher now preserves normal exit summaries better:
 

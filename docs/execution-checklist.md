@@ -45,3 +45,22 @@
 3. Update plugin package
 4. Roll back snapshot if needed
 5. Export or apply local patches when upstream changes break runtime
+
+## Machine2 first-time prep
+
+Before opencode install tests on a clean machine2:
+
+1. `apt install -y glibc-repo`
+2. `apt update`
+3. `apt install -y glibc openssl-glibc`
+4. (Optional fallback) `apt install -y glibc-runner`
+
+Then run package install and behavior verification (`opencode --version`, `opencode --help`, `opencode web`).
+
+## Pacman-primary machine prep
+
+For Termux environments that already use pacman as primary package manager:
+
+1. `pacman -Syu`
+2. `pacman -S glibc openssl-glibc`
+3. (Optional fallback) `pacman -S glibc-runner`

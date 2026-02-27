@@ -6,4 +6,4 @@ Section: utils
 Priority: optional
 Description: Open source coding agent for Termux with TTY+lock cleanup
 Depends: glibc, openssl-glibc, bash, ncurses
-Recommends: glibc-runner
+Suggests: glibc-runner

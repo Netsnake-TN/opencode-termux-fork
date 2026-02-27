@@ -39,7 +39,7 @@ Section: utils
 Priority: optional
 Description: OpenCode CLI for Termux
 Depends: glibc, openssl-glibc, bash, ncurses
-Recommends: glibc-runner
+Suggests: glibc-runner
 EOF
 
 INSTALLED_SIZE=$(du -sk "$DEB_ROOT" | cut -f1)
