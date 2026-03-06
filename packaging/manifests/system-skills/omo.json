@@ -8,7 +8,9 @@
   "enabled": true,
   "events": [
     "post_install",
-    "post_upgrade"
+    "post_upgrade",
+    "pre_remove",
+    "post_remove"
   ],
   "default_enable": false,
   "auto_install_latest": false,
