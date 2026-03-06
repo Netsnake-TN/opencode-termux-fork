@@ -53,3 +53,17 @@ post_upgrade() {
     OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_upgrade || true
   fi
 }
+
+pre_remove() {
+  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  if [[ -x "$hook_runner" ]]; then
+    OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" pre_remove || true
+  fi
+}
+
+post_remove() {
+  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  if [[ -x "$hook_runner" ]]; then
+    OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_remove || true
+  fi
+}
