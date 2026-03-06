@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,6 +51,24 @@ if [[ -f "$ROOT_DIR/scripts/hooks/run-system-skills.sh" ]]; then
 fi
 if [[ -d "$ROOT_DIR/packaging/manifests/system-skills" ]]; then
 	cp -a "$ROOT_DIR/packaging/manifests/system-skills/." "$PREFIX_DIR/lib/opencode/system-skills/"
+fi
+
+DOCS_LIST="${DOCS_LIST:-$ROOT_DIR/docs/bundle-list.txt}"
+DOCS_OUT="$PREFIX_DIR/share/opencode/docs"
+if [[ -f "$DOCS_LIST" ]]; then
+	ensure_dir "$DOCS_OUT"
+	while IFS= read -r rel; do
+		[[ -z "$rel" ]] && continue
+		[[ "$rel" == \#* ]] && continue
+		src="$ROOT_DIR/$rel"
+		if [[ -f "$src" ]]; then
+			dest="$DOCS_OUT/${rel#docs/}"
+			ensure_dir "$(dirname "$dest")"
+			cp -a "$src" "$dest"
+		else
+			log "docs bundle missing: $rel"
+		fi
+	done <"$DOCS_LIST"
 fi
 
 write_build_meta "$ROOT_DIR/artifacts/opencode/build.meta" \
