@@ -12,7 +12,7 @@ jobs:
   build:
     name: Package OpenCode for AgentClaw aarch64
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             curl wget dpkg fakeroot sed \
-            clang llvm gcc-aarch64-linux-gnu libc6-dev-arm64-cross file
+            gcc-aarch64-linux-gnu libc6-dev-arm64-cross file
 
       - name: Download official OpenCode binary
         run: |
@@ -36,114 +36,79 @@ jobs:
           TARBALL_URL="https://github.com/anomalyco/opencode/releases/download/v${{ env.VER }}/opencode-linux-arm64.tar.gz"
           echo "Downloading from: $TARBALL_URL"
           curl -sL "$TARBALL_URL" | tar -xzf - -C staging/
-          echo "✅ Downloaded and extracted"
+          echo "Downloaded and extracted"
           ls -la staging/
           file staging/opencode
-
-      - name: Verify binary type
-        run: |
-          set -euo pipefail
-          readelf -d staging/opencode | grep NEEDED | head -10
-          echo "==="
-          readelf -l staging/opencode | grep interpreter
-          echo "==="
-          echo "✅ Binary is dynamically linked (good for LD_PRELOAD)"
 
       - name: Create faccessat2 shim
         run: |
           set -euo pipefail
-          cat > faccessat2-shim.c << 'EOF'
+          cat > faccessat2-shim.c << 'CEOF'
           #define _GNU_SOURCE
-          #include <dlfcn.h>
           #include <errno.h>
-          #include <fcntl.h>
 
-          /*
-           * faccessat2 shim for Android (user-space LD_PRELOAD)
-           * 
-           * Go 1.24+ calls the faccessat2() libc function which on Android
-           * performs syscall 0x1b7 (faccessat2). Android's seccomp blocks it.
-           * 
-           * By intercepting the libc call and returning ENOSYS, we trigger
-           * glibc's internal fallback to faccessat() (syscall 0x10d) which
-           * works fine on Android.
-           */
           int faccessat2(int dirfd, const char *pathname, int mode, int flags) {
               (void)dirfd;
               (void)pathname;
               (void)mode;
               (void)flags;
-
-              /* Return ENOSYS to trigger glibc fallback to faccessat */
               errno = ENOSYS;
               return -1;
           }
-          EOF
+          CEOF
 
-          # Compile the shim for aarch64 using cross-compiler
           aarch64-linux-gnu-gcc -shared -fPIC -O2 \
             -o libfaccessat2-shim.so faccessat2-shim.c
-          echo "✅ Compiled faccessat2 shim (aarch64)"
+          echo "Compiled faccessat2 shim (aarch64)"
           file libfaccessat2-shim.so
           ls -lh libfaccessat2-shim.so
 
-      - name: Create AgentClaw wrapper script
+      - name: Create AgentClaw package structure
         run: |
           set -euo pipefail
           mkdir -p agentclaw-pkg/usr/bin
           mkdir -p agentclaw-pkg/usr/lib/opencode/lib
 
-          # Install the runtime binary
           cp staging/opencode agentclaw-pkg/usr/lib/opencode/opencode
           chmod 755 agentclaw-pkg/usr/lib/opencode/opencode
 
-          # Install the shim
           cp libfaccessat2-shim.so agentclaw-pkg/usr/lib/opencode/lib/libfaccessat2-shim.so
 
-          # Create the wrapper script
-          cat > agentclaw-pkg/usr/bin/opencode << 'WRAPPER'
-#!/data/data/com.agentclaw/files/usr/bin/bash
-set -euo pipefail
+          tee agentclaw-pkg/usr/bin/opencode > /dev/null << 'WEOF'
+          #!/data/data/com.agentclaw/files/usr/bin/bash
+          set -euo pipefail
 
-SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPENCODE_BIN="$SELF_DIR/../lib/opencode/opencode"
-FACCESSAT2_SHIM="$SELF_DIR/../lib/opencode/lib/libfaccessat2-shim.so"
+          SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          OPENCODE_BIN="$SELF_DIR/../lib/opencode/opencode"
+          FACCESSAT2_SHIM="$SELF_DIR/../lib/opencode/lib/libfaccessat2-shim.so"
 
-# Preload faccessat2 shim to avoid Android seccomp crash
-# Go 1.24+ uses faccessat2 syscall which Android blocks
-if [[ -f "$FACCESSAT2_SHIM" ]]; then
-    export LD_PRELOAD="${FACCESSAT2_SHIM}${LD_PRELOAD:+:$LD_PRELOAD}"
-fi
+          if [[ -f "$FACCESSAT2_SHIM" ]]; then
+              export LD_PRELOAD="${FACCESSAT2_SHIM}${LD_PRELOAD:+:$LD_PRELOAD}"
+          fi
 
-# Set environment variables
-export HOME="${HOME:-/data/data/com.agentclaw/files/home}"
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-export TMPDIR="${TMPDIR:-/data/data/com.agentclaw/files/tmp}"
+          export HOME="${HOME:-/data/data/com.agentclaw/files/home}"
+          export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+          export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+          export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+          export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+          export TMPDIR="${TMPDIR:-/data/data/com.agentclaw/files/tmp}"
 
-# Run OpenCode
-exec "$OPENCODE_BIN" "$@"
-WRAPPER
+          exec "$OPENCODE_BIN" "$@"
+          WEOF
           chmod 755 agentclaw-pkg/usr/bin/opencode
 
-          echo "✅ Created AgentClaw package structure"
-          echo "=== Files ==="
+          echo "Created AgentClaw package structure"
           find agentclaw-pkg -type f -exec ls -lh {} \;
 
-      - name: Verify wrapper works (basic check)
+      - name: Verify no Termux references
         run: |
-          echo "=== Wrapper script ==="
-          cat agentclaw-pkg/usr/bin/opencode
-          echo "==="
-          echo "=== Binary info ==="
-          file agentclaw-pkg/usr/lib/opencode/opencode
-          echo "==="
-          echo "=== Shim info ==="
-          file agentclaw-pkg/usr/lib/opencode/lib/libfaccessat2-shim.so
-          echo "=== No Termux references ==="
-          grep -r "com.termux" agentclaw-pkg/ || echo "✅ No Termux references found"
+          echo "Checking for Termux references..."
+          if grep -r "com.termux" agentclaw-pkg/; then
+            echo "ERROR: Found Termux references!"
+            exit 1
+          else
+            echo "No Termux references found - OK"
+          fi
 
       - name: Create .deb package
         run: |
@@ -152,27 +117,24 @@ WRAPPER
           OUT_DIR="packaging/dpkg"
           mkdir -p "$OUT_DIR/root/DEBIAN"
 
-          # Copy the package structure
           cp -a agentclaw-pkg/* "$OUT_DIR/root/"
 
-          # Create DEBIAN control file
-          cat > "$OUT_DIR/root/DEBIAN/control" << CONTROL
-Package: opencode
-Version: ${VERSION}
-Section: devel
-Priority: optional
-Architecture: arm64
-Depends: libc6
-Maintainer: Netsnake-TN <netsnake-tn@users.noreply.github.com>
-Description: OpenCode AI agent for AgentClaw
- Official OpenCode binary repackaged for AgentClaw with faccessat2 shim
- for Android compatibility.
-CONTROL
+          tee "$OUT_DIR/root/DEBIAN/control" > /dev/null << CEOF
+          Package: opencode
+          Version: ${VERSION}
+          Section: devel
+          Priority: optional
+          Architecture: arm64
+          Depends: libc6
+          Maintainer: Netsnake-TN <netsnake-tn@users.noreply.github.com>
+          Description: OpenCode AI agent for AgentClaw
+           Official OpenCode binary repackaged for AgentClaw with faccessat2 shim
+           for Android compatibility.
+          CEOF
 
-          # Build the .deb
           dpkg-deb --build "$OUT_DIR/root" "$OUT_DIR/opencode_${VERSION}_agentclaw-arm64.deb"
           ls -lh "$OUT_DIR/opencode_${VERSION}_agentclaw-arm64.deb"
-          echo "✅ Created .deb package"
+          echo "Created .deb package"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -188,19 +150,19 @@ CONTROL
           files: packaging/dpkg/*.deb
           body: |
             ## OpenCode ${{ env.VER }} for AgentClaw (aarch64)
-            
+
             Official OpenCode binary repackaged with faccessat2 shim for Android compatibility.
-            
+
             ### Installation
             ```bash
             dpkg -i opencode_${{ env.VER }}_agentclaw-arm64.deb
             ```
-            
+
             ### How it works
-            - Downloads official `opencode-linux-arm64` binary from `anomalyco/opencode`
-            - Adds a `faccessat2` shim (`LD_PRELOAD`) to prevent Android seccomp crash
+            - Downloads official opencode-linux-arm64 binary from anomalyco/opencode
+            - Adds a faccessat2 shim (LD_PRELOAD) to prevent Android seccomp crash
             - Wraps with a launcher script that sets proper environment variables
-            
+
             ### Requirements
             - AgentClaw environment
             - glibc (included in AgentClaw)
