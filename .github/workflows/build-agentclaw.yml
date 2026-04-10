@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       opencode_version:
-        description: 'OpenCode version (from anomalyco/opencode releases)'
+        description: 'OpenCode version (from Hope2333 releases)'
         required: false
-        default: '1.4.3'
+        default: '1.4.0'
 
 jobs:
   build:
-    name: Package OpenCode for AgentClaw aarch64
+    name: Repackage OpenCode for AgentClaw
     runs-on: ubuntu-latest
 
     steps:
@@ -22,95 +22,40 @@ jobs:
           VER="${{ github.event.inputs.opencode_version }}"
           echo "VER=$VER" >> $GITHUB_ENV
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            curl wget dpkg fakeroot sed \
-            gcc-aarch64-linux-gnu libc6-dev-arm64-cross file
+          sudo apt-get install -y curl wget dpkg sed zstd
 
-      - name: Download official OpenCode binary
+      - name: Download Hope2333 prebuilt .deb
         run: |
           set -euo pipefail
-          mkdir -p staging
-          TARBALL_URL="https://github.com/anomalyco/opencode/releases/download/v${{ env.VER }}/opencode-linux-arm64.tar.gz"
-          echo "Downloading from: $TARBALL_URL"
-          curl -sL "$TARBALL_URL" | tar -xzf - -C staging/
-          echo "Downloaded and extracted"
-          ls -la staging/
-          file staging/opencode
+          RELEASE_TAG="Push260401"
+          DEB_URL="https://github.com/Hope2333/opencode-termux/releases/download/${RELEASE_TAG}/opencode_${{ env.VER }}_aarch64.deb"
+          echo "Downloading from: $DEB_URL"
+          curl -sL "$DEB_URL" -o hope-opencode.deb
+          echo "Downloaded:"
+          ls -lh hope-opencode.deb
 
-      - name: Create faccessat2 shim
+      - name: Extract and repackage for AgentClaw
         run: |
           set -euo pipefail
-          cat > faccessat2-shim.c << 'CEOF'
-          #define _GNU_SOURCE
-          #include <errno.h>
+          mkdir -p work
+          cd work
 
-          int faccessat2(int dirfd, const char *pathname, int mode, int flags) {
-              (void)dirfd;
-              (void)pathname;
-              (void)mode;
-              (void)flags;
-              errno = ENOSYS;
-              return -1;
-          }
-          CEOF
+          # Extract the original .deb
+          ar x ../hope-opencode.deb
+          tar --zstd -xf data.tar.zst
 
-          aarch64-linux-gnu-gcc -shared -fPIC -O2 \
-            -o libfaccessat2-shim.so faccessat2-shim.c
-          echo "Compiled faccessat2 shim (aarch64)"
-          file libfaccessat2-shim.so
-          ls -lh libfaccessat2-shim.so
+          # Verify contents
+          echo "=== Extracted files ==="
+          find data -type f -exec ls -lh {} \;
 
-      - name: Create AgentClaw package structure
-        run: |
-          set -euo pipefail
-          mkdir -p agentclaw-pkg/usr/bin
-          mkdir -p agentclaw-pkg/usr/lib/opencode/lib
-
-          cp staging/opencode agentclaw-pkg/usr/lib/opencode/opencode
-          chmod 755 agentclaw-pkg/usr/lib/opencode/opencode
-
-          cp libfaccessat2-shim.so agentclaw-pkg/usr/lib/opencode/lib/libfaccessat2-shim.so
-
-          tee agentclaw-pkg/usr/bin/opencode > /dev/null << 'WEOF'
-          #!/data/data/com.agentclaw/files/usr/bin/bash
-          set -euo pipefail
-
-          SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          OPENCODE_BIN="$SELF_DIR/../lib/opencode/opencode"
-          FACCESSAT2_SHIM="$SELF_DIR/../lib/opencode/lib/libfaccessat2-shim.so"
-
-          if [[ -f "$FACCESSAT2_SHIM" ]]; then
-              export LD_PRELOAD="${FACCESSAT2_SHIM}${LD_PRELOAD:+:$LD_PRELOAD}"
-          fi
-
-          export HOME="${HOME:-/data/data/com.agentclaw/files/home}"
-          export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-          export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-          export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-          export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-          export TMPDIR="${TMPDIR:-/data/data/com.agentclaw/files/tmp}"
-
-          exec "$OPENCODE_BIN" "$@"
-          WEOF
-          chmod 755 agentclaw-pkg/usr/bin/opencode
-
-          echo "Created AgentClaw package structure"
-          find agentclaw-pkg -type f -exec ls -lh {} \;
-
-      - name: Verify no Termux references in wrapper
-        run: |
-          echo "Checking wrapper script for Termux references..."
-          if grep "com.termux" agentclaw-pkg/usr/bin/opencode; then
-            echo "ERROR: Found Termux references in wrapper!"
-            exit 1
-          else
-            echo "Wrapper is clean - OK"
-          fi
-          echo "Note: The upstream binary may contain embedded Termux strings"
-          echo "but they are not used at runtime."
+          # Verify binary type (should be bionic/Android)
+          file data/data/com.termux/files/usr/lib/opencode/runtime/opencode 2>/dev/null || \
+          file data/data/com.termux/files/usr/lib/opencode/opencode 2>/dev/null || \
+          echo "Looking for binary..."
+          find data -type f -name "opencode" -exec file {} \;
 
       - name: Create .deb package
         run: |
@@ -119,19 +64,22 @@ jobs:
           OUT_DIR="packaging/dpkg"
           mkdir -p "$OUT_DIR/root/DEBIAN"
 
-          cp -a agentclaw-pkg/* "$OUT_DIR/root/"
+          # Repackage - keep original structure (Termux paths are handled by the wrapper)
+          # We'll install as-is since the wrapper creates the environment
+          cd work
+          cp -a data/* "../$OUT_DIR/root/"
+          cd ..
 
+          # Create DEBIAN control
           tee "$OUT_DIR/root/DEBIAN/control" > /dev/null << CEOF
           Package: opencode
           Version: ${VERSION}
           Section: devel
           Priority: optional
           Architecture: arm64
-          Depends: libc6
           Maintainer: Netsnake-TN <netsnake-tn@users.noreply.github.com>
           Description: OpenCode AI agent for AgentClaw
-           Official OpenCode binary repackaged for AgentClaw with faccessat2 shim
-           for Android compatibility.
+           Repackaged from Hope2333/opencode-termux for AgentClaw.
           CEOF
 
           dpkg-deb --build "$OUT_DIR/root" "$OUT_DIR/opencode_${VERSION}_agentclaw-arm64.deb"
@@ -153,20 +101,13 @@ jobs:
           body: |
             ## OpenCode ${{ env.VER }} for AgentClaw (aarch64)
 
-            Official OpenCode binary repackaged with faccessat2 shim for Android compatibility.
+            Repackaged from [Hope2333/opencode-termux](https://github.com/Hope2333/opencode-termux).
 
             ### Installation
             ```bash
-            dpkg -i opencode_${{ env.VER }}_agentclaw-arm64.deb
+            # Extract and install manually (dpkg architecture mismatch):
+            ar x opencode_${{ env.VER }}_agentclaw-arm64.deb
+            tar --zstd -xf data.tar.zst -C /
             ```
-
-            ### How it works
-            - Downloads official opencode-linux-arm64 binary from anomalyco/opencode
-            - Adds a faccessat2 shim (LD_PRELOAD) to prevent Android seccomp crash
-            - Wraps with a launcher script that sets proper environment variables
-
-            ### Requirements
-            - AgentClaw environment
-            - glibc (included in AgentClaw)
           draft: false
           prerelease: false
