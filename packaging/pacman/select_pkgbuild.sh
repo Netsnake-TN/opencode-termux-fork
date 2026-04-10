@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 # Select appropriate PKGBUILD based on architecture
 
 ARCH=$(uname -m)

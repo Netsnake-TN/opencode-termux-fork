@@ -13,7 +13,7 @@ makedepends=()
 source=()
 sha256sums=()
 
-_prefix="${PREFIX:-/data/data/com.termux/files/usr}"
+_prefix="${PREFIX:-/data/data/com.agentclaw/files/usr}"
 _repo_root="${REPO_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 _staged_prefix="${STAGED_PREFIX:-${_repo_root}/artifacts/staged/prefix}"
 
@@ -41,28 +41,28 @@ post_install() {
   echo "OpenCode for Termux installed"
   echo "Run: opencode --version"
   echo "Optional fallback compatibility tools: pkg install glibc-runner"
-  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
   if [[ -x "$hook_runner" ]]; then
     OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_install || true
   fi
 }
 
 post_upgrade() {
-  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
   if [[ -x "$hook_runner" ]]; then
     OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_upgrade || true
   fi
 }
 
 pre_remove() {
-  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
   if [[ -x "$hook_runner" ]]; then
     OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" pre_remove || true
   fi
 }
 
 post_remove() {
-  local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+  local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
   if [[ -x "$hook_runner" ]]; then
     OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_remove || true
   fi

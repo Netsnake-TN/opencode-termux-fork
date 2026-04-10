@@ -46,7 +46,7 @@ prepare() {
 build() {
     msg "Building OpenCode staged prefix..."
     
-    local prefix="${PREFIX:-/data/data/com.termux/files/usr}"
+    local prefix="${PREFIX:-/data/data/com.agentclaw/files/usr}"
     mkdir -p "$pkgdir$prefix/lib/opencode/runtime"
     mkdir -p "$pkgdir$prefix/bin"
     mkdir -p "$pkgdir$prefix/share/opencode"
@@ -72,7 +72,7 @@ build() {
     else
         warning "Runtime not found - creating placeholder"
         cat > "$pkgdir$prefix/lib/opencode/runtime/opencode" <<'PLACEHOLDER'
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 echo "OpenCode runtime not installed. Please set OPENCODE_RUNTIME or build runtime."
 exit 1
 PLACEHOLDER
@@ -80,7 +80,7 @@ PLACEHOLDER
     fi
     
     cat > "$pkgdir$prefix/bin/opencode" <<'LAUNCHER'
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -139,21 +139,21 @@ post_install() {
 }
 
 post_upgrade() {
-    local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+    local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
     if [[ -x "$hook_runner" ]]; then
         OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_upgrade || true
     fi
 }
 
 pre_remove() {
-    local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+    local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
     if [[ -x "$hook_runner" ]]; then
         OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" pre_remove || true
     fi
 }
 
 post_remove() {
-    local hook_runner="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/tools/run-system-skills.sh"
+    local hook_runner="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/tools/run-system-skills.sh"
     if [[ -x "$hook_runner" ]]; then
         OPENCODE_HOOK_STRICT=0 OPENCODE_HOOK_ENABLE_NETWORK=0 "$hook_runner" post_remove || true
     fi

@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -31,7 +31,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cp /data/data/com.termux/files/usr/etc/makepkg.conf "$TMP_MAKEPKG_CONF"
+cp /data/data/com.agentclaw/files/usr/etc/makepkg.conf "$TMP_MAKEPKG_CONF"
 printf "\nPACKAGER=%q\n" "$PACKAGER_NAME" >>"$TMP_MAKEPKG_CONF"
 
 cp "$ROOT_DIR/packaging/pacman/PKGBUILD" "$TMP_PKGBUILD"

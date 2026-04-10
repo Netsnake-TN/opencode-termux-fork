@@ -1,14 +1,14 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 set -euo pipefail
 
 CFG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 CFG_FILE="$CFG_DIR/opencode.json"
 OMO_CFG="$CFG_DIR/oh-my-opencode.json"
 LOCAL_PLUGINS="$CFG_DIR/local-plugins"
-SYSTEM_PLUGINS="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/plugins"
-SYSTEM_SKILLS="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/system-skills"
-SKILL_REGISTRY="${PREFIX:-/data/data/com.termux/files/usr}/share/opencode/system-skills-registry.json"
-SKILL_BLOCKLIST="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/system-skills/blocklist.json"
+SYSTEM_PLUGINS="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/plugins"
+SYSTEM_SKILLS="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/system-skills"
+SKILL_REGISTRY="${PREFIX:-/data/data/com.agentclaw/files/usr}/share/opencode/system-skills-registry.json"
+SKILL_BLOCKLIST="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/system-skills/blocklist.json"
 PM_STATE="$CFG_DIR/plugin-manager-state.json"
 
 json_escape() {

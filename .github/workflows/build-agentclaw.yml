@@ -1,0 +1,104 @@
+name: Build OpenCode for AgentClaw
+
+on:
+  workflow_dispatch:
+    inputs:
+      opencode_version:
+        description: 'OpenCode version to build'
+        required: false
+        default: '1.4.0'
+      output_format:
+        description: 'Output format'
+        required: false
+        default: 'deb'
+        type: choice
+        options:
+          - deb
+          - pacman
+          - both
+
+jobs:
+  build:
+    name: Build for AgentClaw aarch64
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup version
+        run: |
+          if [ -z "${{ github.event.inputs.opencode_version }}" ]; then
+            VER="latest"
+          else
+            VER="${{ github.event.inputs.opencode_version }}"
+          fi
+          echo "VER=$VER" >> $GITHUB_ENV
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl wget unzip jq dpkg fakeroot \
+            nodejs npm python3 make
+
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Build runtime
+        run: |
+          chmod +x tools/produce-local.sh
+          ./tools/produce-local.sh $VER || echo "Build may have warnings"
+
+      - name: Stage build
+        run: |
+          chmod +x scripts/build.sh
+          ./scripts/build.sh || echo "Stage may have warnings"
+
+      - name: Create deb package
+        if: ${{ github.event.inputs.output_format == 'deb' || github.event.inputs.output_format == 'both' || github.event.inputs.output_format == '' }}
+        run: |
+          chmod +x scripts/package/package_deb.sh
+          ./scripts/package/package_deb.sh
+          ls -la packaging/dpkg/*.deb 2>/dev/null || echo "No deb package found"
+
+      - name: Create pacman package  
+        if: ${{ github.event.inputs.output_format == 'pacman' || github.event.inputs.output_format == 'both' }}
+        run: |
+          chmod +x scripts/package/package_pacman.sh
+          ./scripts/package/package_pacman.sh
+          ls -la packaging/pacman/*.pkg.* 2>/dev/null || echo "No pacman package found"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-agentclaw-aarch64
+          path: |
+            packaging/dpkg/*.deb
+            packaging/pacman/*.pkg.*
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            packaging/dpkg/*.deb
+            packaging/pacman/*.pkg.*
+          body: |
+            ## OpenCode for AgentClaw (aarch64)
+            
+            ### Installation (AgentClaw)
+            ```bash
+            # For .deb package:
+            dpkg -i opencode_*.deb
+            
+            # For pacman package:
+            pacman -U opencode-*.pkg.tar.xz
+            ```
+            
+            ### Version: ${{ env.VER }}
+          draft: false
+          prerelease: false

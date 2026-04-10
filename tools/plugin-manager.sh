@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.agentclaw/files/usr/bin/bash
 set -euo pipefail
 
 DEFAULT_NAME="oh-my-opencode"
@@ -7,7 +7,7 @@ CFG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
 PLUG_DIR="$CFG_DIR/local-plugins"
 SNAP_DIR="$CFG_DIR/plugin-snapshots"
 STATE_FILE="$CFG_DIR/plugin-manager-state.json"
-SYSTEM_PLUG_DIR="${PREFIX:-/data/data/com.termux/files/usr}/lib/opencode/plugins"
+SYSTEM_PLUG_DIR="${PREFIX:-/data/data/com.agentclaw/files/usr}/lib/opencode/plugins"
 GIT_RETRY_MAX="${PLUGIN_GIT_RETRY_MAX:-3}"
 GIT_RETRY_DELAY="${PLUGIN_GIT_RETRY_DELAY:-2}"
 
