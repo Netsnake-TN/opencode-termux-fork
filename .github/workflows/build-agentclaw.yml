@@ -6,7 +6,7 @@ on:
       opencode_version:
         description: 'OpenCode version (from anomalyco/opencode releases)'
         required: false
-        default: '1.4.0'
+        default: '1.4.3'
 
 jobs:
   build:
@@ -26,7 +26,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            curl wget dpkg fakeroot sed clang llvm
+            curl wget dpkg fakeroot sed \
+            clang llvm gcc-aarch64-linux-gnu libc6-dev-arm64-cross file
 
       - name: Download official OpenCode binary
         run: |
@@ -56,33 +57,34 @@ jobs:
           #include <dlfcn.h>
           #include <errno.h>
           #include <fcntl.h>
-          #include <stdarg.h>
-          #include <string.h>
-          #include <sys/syscall.h>
-          #include <unistd.h>
 
           /*
-           * faccessat2 shim for Android
+           * faccessat2 shim for Android (user-space LD_PRELOAD)
            * 
-           * Go 1.24+ uses the faccessat2 syscall (0x1b7) which Android's
-           * seccomp filter blocks. This shim intercepts the call and returns
-           * ENOSYS, triggering glibc's fallback to faccessat which works.
+           * Go 1.24+ calls the faccessat2() libc function which on Android
+           * performs syscall 0x1b7 (faccessat2). Android's seccomp blocks it.
+           * 
+           * By intercepting the libc call and returning ENOSYS, we trigger
+           * glibc's internal fallback to faccessat() (syscall 0x10d) which
+           * works fine on Android.
            */
-          SYSCALL_DEFINE(faccessat2)(int dirfd, const char *pathname, int mode, int flags) {
+          int faccessat2(int dirfd, const char *pathname, int mode, int flags) {
               (void)dirfd;
               (void)pathname;
               (void)mode;
               (void)flags;
-              
+
               /* Return ENOSYS to trigger glibc fallback to faccessat */
               errno = ENOSYS;
               return -1;
           }
           EOF
 
-          # Compile the shim
-          clang -shared -fPIC -O2 -o libfaccessat2-shim.so faccessat2-shim.c
-          echo "✅ Compiled faccessat2 shim"
+          # Compile the shim for aarch64 using cross-compiler
+          aarch64-linux-gnu-gcc -shared -fPIC -O2 \
+            -o libfaccessat2-shim.so faccessat2-shim.c
+          echo "✅ Compiled faccessat2 shim (aarch64)"
+          file libfaccessat2-shim.so
           ls -lh libfaccessat2-shim.so
 
       - name: Create AgentClaw wrapper script
